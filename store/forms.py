@@ -2,6 +2,7 @@ from django import forms
 from django.forms import widgets
 from django_countries.fields import CountryField
 from django_countries.widgets import CountrySelectWidget
+from .models import  Coupon
 PAYMENT_CHOICES = (
     ('Stripe', 'Stripe'),
     ('Paypal', 'Paypal'),
@@ -24,3 +25,13 @@ class CheckoutForm(forms.Form):
     same_billing_address = forms.BooleanField(required=False)
     save_info = forms.BooleanField( required=False)
     payment_option = forms.ChoiceField(widget=forms.RadioSelect, choices=PAYMENT_CHOICES)
+
+class CouponForm (forms.Form):
+    code = forms.CharField(widget=forms.TextInput(attrs={
+        'class' : 'form-control',
+        'placeholder': 'Promo Code ',
+        'arial-label' : 'Recipient\'s username',
+        'arial-drcsribeby': 'basic-addon2'
+    }))
+
+    

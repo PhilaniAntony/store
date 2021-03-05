@@ -171,17 +171,13 @@ button:hover {
             </li>
             {% endfor %}
             
-            
-            <li class="list-group-item d-flex justify-content-between">
-              <span>Total (USD)</span>
-              <strong>${{ order.get_total }}</strong>
-            </li>
           </ul>
           <!-- Cart -->
+          {% include "order_snippet.html" %}
 
         </div>
 
-        {% include "order_snippet.html" %}
+        
 
       </div>
 

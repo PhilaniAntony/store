@@ -12,8 +12,8 @@ import stripe
 stripe_api_key = stripe_api_key
 
 #import models
-from .models import Item, OrderItem, Order, BillingAddress, Payment
-from .forms import CheckoutForm
+from .models import Item, OrderItem, Order, BillingAddress, Payment,Coupon
+from .forms import CheckoutForm, CouponForm
 
 # Create your views here.
 
@@ -53,7 +53,13 @@ class CheckoutView(LoginRequiredMixin,View):
         context = {}
         user = self.request.user
         form = CheckoutForm()
-        context['form'] = form
+        try:
+            order = Order.objects.get(user=self.request.user, ordered = False)
+            context['order'] = order
+            context['form'] = form
+            context['couponform'] = CouponForm()
+        except ObjectDoesNotExist:
+            return redirect('store:checkoutpage')
         
         qs = Order.objects.filter(user=user, ordered=False)
         if qs.exists():
@@ -100,8 +106,13 @@ class PaymentView(View):
     
     def get(self,*rags, **kwargs):
         context = {}
-        order = Order.objects.get(user=self.request.user, ordered = False)
-        context['order'] = order
+        try:
+            order = Order.objects.get(user=self.request.user, ordered = False)
+            context['order'] = order
+            context['couponform'] = CouponForm()
+        except ObjectDoesNotExist:
+            return redirect('store:checkoutpage')
+
         return render(self.request, 'payment.html', context) 
 
     def post(self,*rags, **kwargs):
@@ -121,7 +132,11 @@ class PaymentView(View):
             payment.user = self.request.user
             payment.amount= amount
             payment.save()
-
+            #assign the payment to the order
+            order_items = order.items.all()
+            order_items.update(ordered=True )
+            for item in order_items:
+                item.save()
             order.ordered = True
             order.payment = payment
             order.save()
@@ -274,3 +289,30 @@ class OrderSummary(LoginRequiredMixin, View):
         except ObjectDoesNotExist:
             return redirect('/')
         return render(self.request, 'order_summary.html', context)
+
+def get_coupon(request,code):
+    try:
+        coupon = Coupon.objects.filter(code=code).first()
+        return coupon
+    except ObjectDoesNotExist:
+        messages.info(request,'This coupon does not exist')
+        return redirect('store:checkoutpage')
+
+
+def add_coupon(request):
+    if request.method == 'POST':
+        form = CouponForm(request.POST or None) 
+        if form.is_valid():
+            code = form.cleaned_data.get('code')
+            coupon = Coupon(code=code)
+            coupon.save()
+            try:
+                order = Order.objects.filter(user=request.user, ordered=False).first()
+                order.coupon = get_coupon(request, code)
+                order.save()
+                messages.info(request,'Successfully added a coupon')
+                return redirect('store:checkoutpage')
+
+            except ObjectDoesNotExist:
+                messages.info(request,'You do not have an active order')
+                return redirect('store:checkoutpage')

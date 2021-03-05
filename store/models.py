@@ -29,6 +29,7 @@ class Item(models.Model):
     discount_price = models.FloatField(blank=True, null=True)
     category = models.CharField(choices=CATEGORY_CHOICES, max_length=1)
     label = models.CharField(choices=LABEL_CHOICES, max_length=1)
+    image = models.ImageField(blank=True, null=True)
     slug = models.SlugField()
 
     def __str__(self):
@@ -48,6 +49,14 @@ class Item(models.Model):
         product_price = self.price - self.discount_price
         rounded_price = round(product_price, 2)
         return rounded_price
+
+    @property
+    def imageURL(self):
+        try:
+            url = self.image.url
+        except:
+            url = ''
+        return url 
 
 
 class OrderItem(models.Model):
@@ -82,6 +91,7 @@ class Order(models.Model):
     order_date = models.DateTimeField()
     billing_address = models.ForeignKey('BillingAddress',blank=True, null=True, on_delete=models.SET_NULL)
     payment = models.ForeignKey('Payment', blank=True,null=True,on_delete=models.SET_NULL)
+    coupon = models.ForeignKey('Coupon', blank=True,null=True,on_delete=models.SET_NULL)
 
     def __str__(self):
         return f'{self.user.username}  '
@@ -90,6 +100,7 @@ class Order(models.Model):
         total = 0
         for order_item in self.items.all():
             total += order_item.get_total_item_price()
+        total -= self.coupon.amount
         return total
 
 class BillingAddress (models.Model):
@@ -109,3 +120,9 @@ class  Payment(models.Model):
 
     def __str__(self):
         return self.user.email
+
+class Coupon (models.Model):
+    code = models.CharField(max_length=15)
+    amount = models.FloatField()
+    def __str__(self):
+        return self.code
